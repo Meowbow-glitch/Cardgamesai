@@ -6,6 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import aiosqlite
+import io
 
 import sys
 sys.path.append('..')
@@ -157,6 +158,88 @@ class CollectionCog(commands.Cog):
             ]
         except Exception:
             return []
+    
+    @app_commands.command(name="export", description="Export your collection to a file for importing to Moxfield or other sites")
+    @app_commands.describe(format="Export format")
+    @app_commands.choices(format=[
+        app_commands.Choice(name="Moxfield (Bulk Edit)", value="moxfield"),
+        app_commands.Choice(name="Plain Text (Card Names)", value="plaintext"),
+        app_commands.Choice(name="CSV", value="csv")
+    ])
+    async def export_collection(self, interaction: discord.Interaction, format: str = "moxfield"):
+        """Export user's collection to a file format suitable for import to deck building sites"""
+        await interaction.response.defer()
+        
+        try:
+            user_id = str(interaction.user.id)
+            
+            async with self.bot.db.execute(
+                '''SELECT name, set_code, collector_number 
+                   FROM collections WHERE user_id = ? ORDER BY name''',
+                (user_id,)
+            ) as cursor:
+                cards = await cursor.fetchall()
+            
+            if not cards:
+                await interaction.followup.send("Your collection is empty. Use `/import` to add cards first!")
+                return
+            
+            # Generate export content based on format
+            if format == "moxfield":
+                # Moxfield Bulk Edit format: "1 Card Name (SET) CollectorNumber"
+                lines = []
+                for name, set_code, collector_num in cards:
+                    # Format: "1 Card Name (SET) CollectorNumber"
+                    line = f"1 {name}"
+                    if set_code:
+                        line += f" ({set_code.upper()})"
+                    if collector_num:
+                        line += f" {collector_num}"
+                    lines.append(line)
+                content = "\n".join(lines)
+                filename = f"{interaction.user.display_name}_collection_moxfield.txt"
+                description = "Moxfield format"
+                
+            elif format == "plaintext":
+                # Simple text list
+                lines = [name for name, _, _ in cards]
+                content = "\n".join(lines)
+                filename = f"{interaction.user.display_name}_collection.txt"
+                description = "Plain text list"
+                
+            else:  # csv
+                import csv
+                output = io.StringIO()
+                writer = csv.writer(output)
+                writer.writerow(["Name", "Set Code", "Collector Number"])
+                for name, set_code, collector_num in cards:
+                    writer.writerow([name, set_code.upper() if set_code else "", collector_num])
+                content = output.getvalue()
+                filename = f"{interaction.user.display_name}_collection.csv"
+                description = "CSV format"
+            
+            # Create file attachment
+            file = discord.File(
+                fp=io.BytesIO(content.encode('utf-8')),
+                filename=filename
+            )
+            
+            embed = discord.Embed(
+                title="📤 Collection Exported",
+                description=f"Exported **{len(cards)}** cards in {description}",
+                color=0x2ecc71
+            )
+            embed.add_field(
+                name="Import Instructions",
+                value="**Moxfield:** Go to your Collection → Click 'Edit' → 'Bulk Edit' → Paste the contents",
+                inline=False
+            )
+            embed.set_footer(text=f"Export generated for {interaction.user.display_name}")
+            
+            await interaction.followup.send(embed=embed, file=file)
+            
+        except Exception as e:
+            await interaction.followup.send(f"Error exporting collection: {str(e)}", ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(CollectionCog(bot))

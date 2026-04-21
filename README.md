@@ -9,6 +9,7 @@ A Discord bot for searching and collecting Magic: The Gathering cards using the 
 - 🔄 **Autocomplete** card names as you type
 - 🗑️ **Automatic migration sync** for card ID changes
 - 📊 **Rich embeds** with card images
+- 📤 **Export collections** to Moxfield-compatible format (and CSV/Plain Text)
 
 ## Quick Start
 
@@ -77,6 +78,7 @@ Logged in as BotName (ID: 123456789012345678)
 | `/import <card_name>` | Add card to your collection | `/import Darkness` |
 | `/collection` | View your collection | `/collection` |
 | `/remove <card_name>` | Remove from collection | `/remove Darkness` |
+| `/export [format]` | Export collection to file | `/export moxfield` |
 
 ## Project Structure
 
@@ -92,6 +94,38 @@ scryfall-bot/
 ├── .env.example        # Environment template
 └── Dockerfile          # Container config
 ```
+
+## Collection Export
+
+The bot supports exporting your collection to multiple formats for importing into deck building websites:
+
+### Moxfield Format (Recommended)
+```
+/export format: Moxfield (Bulk Edit)
+```
+Outputs a text file in Moxfield's bulk edit format:
+```
+1 Card Name (SET) CollectorNumber
+```
+
+To import to Moxfield:
+1. Go to your Collection page
+2. Click "Edit Collection"
+3. Select "Bulk Edit"
+4. Paste the contents from the exported file
+5. Click "Import"
+
+### Plain Text Format
+```
+/export format: Plain Text
+```
+Simple list of card names, one per line.
+
+### CSV Format
+```
+/export format: CSV
+```
+Comma-separated values with columns: Name, Set Code, Collector Number
 
 ## Docker Deployment
 
@@ -137,6 +171,10 @@ pip install discord.py
 ### Database errors
 - The SQLite database is created automatically on first run
 - Ensure the bot has write permissions in the directory
+
+## Version
+
+This is version 2 of the bot with collection export functionality added.
 
 ## License
 
