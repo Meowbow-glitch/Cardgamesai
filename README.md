@@ -1,0 +1,143 @@
+# Scryfall Discord Bot
+
+A Discord bot for searching and collecting Magic: The Gathering cards using the Scryfall API.
+
+## Features
+
+- 🔍 **Search cards** from Scryfall with pagination
+- 📚 **Manage collections** per-user in SQLite
+- 🔄 **Autocomplete** card names as you type
+- 🗑️ **Automatic migration sync** for card ID changes
+- 📊 **Rich embeds** with card images
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Required packages:
+- `discord.py>=2.0.0` (Discord bot framework)
+- `aiosqlite` (Async SQLite)
+- `python-dotenv` (Environment variables)
+- `aiohttp` or `requests` (API calls)
+
+### 2. Create Discord Bot
+
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click "New Application" → Name it → Create
+3. Go to "Bot" tab → Click "Add Bot" → Yes, do it!
+4. Under **Privileged Gateway Intents**, enable:
+   - ✅ MESSAGE CONTENT INTENT (if using prefix commands)
+5. Click "Reset Token" → Copy the token
+6. Go to "OAuth2" → "URL Generator"
+   - Select scopes: `bot`, `applications.commands`
+   - Bot permissions: `Send Messages`, `Embed Links`, `Use Slash Commands`
+   - Copy the URL and open it to invite the bot to your server
+
+### 3. Configure Environment
+
+Copy the example file and add your token:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`:
+```
+DISCORD_TOKEN=your_bot_token_here
+APPLICATION_ID=your_application_id_here
+```
+
+Get Application ID from Discord Developer Portal → "General Information" → Application ID
+
+### 4. Run the Bot
+
+```bash
+python main.py
+```
+
+You should see:
+```
+Logged in as BotName (ID: 123456789012345678)
+------
+```
+
+## Commands
+
+### Slash Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `/ping` | Check bot latency | `/ping` |
+| `/search <query>` | Search for cards | `/search lightning bolt` |
+| `/card <name>` | Get detailed card info | `/card Black Lotus` |
+| `/import <card_name>` | Add card to your collection | `/import Darkness` |
+| `/collection` | View your collection | `/collection` |
+| `/remove <card_name>` | Remove from collection | `/remove Darkness` |
+
+## Project Structure
+
+```
+scryfall-bot/
+├── main.py              # Bot entry point
+├── scryfall_api.py      # Scryfall API wrapper with rate limiting
+├── cogs/
+│   ├── search.py        # Search + pagination + autocomplete
+│   ├── collection.py     # User collections
+│   └── migration.py      # Automated migration sync
+├── requirements.txt     # Python dependencies
+├── .env.example        # Environment template
+└── Dockerfile          # Container config
+```
+
+## Docker Deployment
+
+Build and run with Docker:
+
+```bash
+# Build
+docker build -t scryfall-bot .
+
+# Run (with persistent database)
+docker run -d \
+  --name scryfall-bot \
+  -v $(pwd)/data:/data \
+  -e DISCORD_TOKEN=your_token_here \
+  scryfall-bot
+```
+
+## Database Schema
+
+- **users**: Discord user IDs
+- **collections**: User card collections (links to Scryfall IDs)
+- **migrations_log**: Tracks processed Scryfall migrations
+
+## Rate Limiting
+
+The bot respects Scryfall's 10 requests/second limit using a token bucket algorithm.
+
+## Troubleshooting
+
+### "No module named 'discord'"
+```bash
+pip install discord.py
+```
+
+### Bot not responding to slash commands
+- Make sure you synced commands: the bot calls `tree.sync()` on startup
+- Wait up to 1 hour for global commands to propagate, or use guild-specific sync
+
+### "Interaction failed" errors
+- The bot uses `interaction.response.defer()` before API calls to avoid 3-second timeout
+- Check logs for actual error details
+
+### Database errors
+- The SQLite database is created automatically on first run
+- Ensure the bot has write permissions in the directory
+
+## License
+
+MIT
